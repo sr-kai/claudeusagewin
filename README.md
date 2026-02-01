@@ -1,4 +1,4 @@
-# Claude Usage for WSL
+# Claude Usage for WSL <img src="icons/claudeusagewin.png" width="32" align="right" />
 
 A Windows system tray application that displays Claude Code usage limits in real-time. Designed for users running Claude Code in WSL.
 
@@ -6,13 +6,15 @@ A Windows system tray application that displays Claude Code usage limits in real
 
 ## Features
 
-- **System tray icon** with color-coded circle (green/yellow/red based on usage)
+- **Dynamic tray icon** showing your current usage percentage (0-100%)
+- **Color-coded status dot** - Green (0-69%), Yellow (70-89%), Red (90%+)
+- **Theme-aware icons** - Adapts to Windows dark/light theme automatically
+- **Special icons** - Unique icons for low usage, 95%, 99%, 100%, and error states
 - **Fluent Design UI** matching Windows 11 style (Mica background, rounded corners)
 - **Session usage** (5-hour window) with progress bar and reset countdown
 - **Weekly usage** (7-day window) with progress bar and reset countdown
 - **Auto-refresh** every 2 minutes
 - **Launch at Login** option
-- **Dark/Light theme** follows Windows system settings
 - **WSL credential auto-discovery** - automatically finds credentials from Debian, Ubuntu, and other WSL distros
 
 ## Requirements
@@ -38,7 +40,7 @@ Download the latest `ClaudeUsage.exe` from the [Releases](https://github.com/sr-
 
 1. Make sure you've authenticated with Claude Code CLI in WSL (`claude` command)
 2. Run `ClaudeUsage.exe` on Windows
-3. The app runs in system tray - look for the colored circle icon
+3. The app runs in system tray - look for the usage percentage icon
 4. **Left-click** the tray icon to see detailed usage popup
 5. **Right-click** for quick actions (Refresh, Launch at Login, Exit)
 
@@ -57,6 +59,7 @@ It then queries the Anthropic usage API to display your current limits.
 
 - C# / .NET 8
 - WPF with [WPF-UI](https://github.com/lepoco/wpfui) for Fluent Design
+- [Svg.NET](https://github.com/svg-net/SVG) for dynamic icon rendering
 - System.Windows.Forms.NotifyIcon for tray integration
 
 ## License
