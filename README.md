@@ -25,7 +25,7 @@ A Windows system tray application that displays Claude Code usage limits in real
 ## Installation
 
 ### Option 1: Download Release
-Download the latest `ClaudeUsage.exe` from the [Releases](https://github.com/sr-kai/claudeusage/releases) page.
+Download the latest `ClaudeUsage.exe` from the [Releases](https://github.com/sr-kai/claudeusagewin/releases) page.
 
 ### Option 2: Build from Source
 1. Clone this repository

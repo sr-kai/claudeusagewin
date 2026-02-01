@@ -22,10 +22,15 @@
   <ItemGroup>
     <PackageReference Include="WPF-UI" Version="3.0.5" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Svg" Version="3.4.7" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Resources\*.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\icons\*.svg" Link="Icons\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

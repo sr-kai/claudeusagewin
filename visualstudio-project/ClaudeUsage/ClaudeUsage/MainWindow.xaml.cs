@@ -129,7 +129,7 @@ public partial class MainWindow : FluentWindow
     {
         Process.Start(new ProcessStartInfo
         {
-            FileName = "https://github.com/sr-kai/claudeusage",
+            FileName = "https://github.com/sr-kai/claudeusagewin",
             UseShellExecute = true
         });
     }
