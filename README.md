@@ -1,4 +1,4 @@
-# Claude Usage for WSL <img src="icons/claudeusagewin.png" width="32" align="right" />
+# Claude Usage for WSL
 
 A Windows system tray application that displays Claude Code usage limits in real-time. Designed for users running Claude Code in WSL.
 
