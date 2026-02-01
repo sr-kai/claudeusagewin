@@ -1,6 +1,6 @@
 # Claude Usage for WSL
 
-A Windows system tray application that displays Claude Code usage limits in real-time. Designed for users running Claude Code in WSL (Windows Subsystem for Linux).
+A Windows system tray application that displays Claude Code usage limits in real-time. Designed for users running Claude Code in WSL.
 
 ![Claude Usage Screenshot](screenshot.png)
 
