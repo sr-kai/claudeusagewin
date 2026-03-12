@@ -1,6 +1,6 @@
-# Claude Usage for WSL
+# Claude Usage for Windows and WSL
 
-A Windows system tray application that displays Claude Code usage limits in real-time. Designed for users running Claude Code in WSL.
+A Windows system tray application that displays Claude Code usage limits in real-time. Works with both Claude Code native for Windows and Claude Code running in WSL.
 
 ![Claude Usage Screenshot](screenshot.png)
 
@@ -13,15 +13,17 @@ A Windows system tray application that displays Claude Code usage limits in real
 - **Fluent Design UI** matching Windows 11 style (Mica background, rounded corners)
 - **Session usage** (5-hour window) with progress bar and reset countdown
 - **Weekly usage** (7-day window) with progress bar and reset countdown
-- **Auto-refresh** every 2 minutes
+- **Sonnet Only usage** - Model-specific utilization with reset countdown
+- **Overage tracking** - Extra usage spend vs. monthly limit
+- **Auto-refresh** every 5 minutes
+- **Retry with exponential backoff** on API errors (429/5xx, up to 5 retries)
 - **Launch at Login** option
-- **WSL credential auto-discovery** - automatically finds credentials from Debian, Ubuntu, and other WSL distros
+- **Smart credential auto-discovery** - Automatically detects credentials from Claude Code native for Windows or WSL distros (Debian, Ubuntu, etc.), picking the most recently used installation when both exist
 
 ## Requirements
 
 - Windows 10/11
-- WSL with a Linux distro (Debian, Ubuntu, etc.)
-- [Claude Code CLI](https://claude.ai/code) installed and authenticated in WSL
+- [Claude Code CLI](https://claude.ai/code) installed and authenticated (native Windows or WSL)
 - .NET 8.0 Runtime
 
 ## Installation
@@ -38,7 +40,7 @@ Download the latest `ClaudeUsage.exe` from the [Releases](https://github.com/sr-
 
 ## Usage
 
-1. Make sure you've authenticated with Claude Code CLI in WSL (`claude` command)
+1. Make sure you've authenticated with Claude Code CLI (`claude` command) — either native Windows or in WSL
 2. Run `ClaudeUsage.exe` on Windows
 3. The app runs in system tray - look for the usage percentage icon
 4. **Left-click** the tray icon to see detailed usage popup
@@ -46,12 +48,14 @@ Download the latest `ClaudeUsage.exe` from the [Releases](https://github.com/sr-
 
 ## How It Works
 
-The app automatically discovers your Claude Code OAuth credentials from WSL by searching:
-- `\\wsl$\Debian\home\<user>\.claude\.credentials.json`
-- `\\wsl$\Ubuntu\home\<user>\.claude\.credentials.json`
-- Other common WSL distros
+The app automatically discovers your Claude Code OAuth credentials by searching (in order):
 
-It then queries the Anthropic usage API to display your current limits.
+1. **Windows native**: `%USERPROFILE%\.claude\.credentials.json`
+2. **WSL distros**: `\\wsl$\{distro}\home\{user}\.claude\.credentials.json` (Debian, Ubuntu, etc.)
+
+If credentials are found in both locations, the most recently modified file is used — so it automatically follows whichever Claude Code installation you're actively using. WSL paths are skipped with a 3-second timeout if WSL isn't running, so native-only users experience no delay.
+
+The app sends requests with the required `claude-code/*` User-Agent header (auto-detecting your installed version) and retries automatically on rate limits or server errors.
 
 > **Note:** This uses an undocumented API that could change at any time.
 

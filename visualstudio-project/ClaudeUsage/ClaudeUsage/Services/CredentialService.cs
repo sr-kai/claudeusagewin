@@ -13,63 +13,125 @@ public class CredentialService
     private const string TokenRefreshUrl = "https://console.anthropic.com/v1/oauth/token";
 
     private static string? _cachedCredentialsPath;
+    private static DateTime _cacheTimestamp = DateTime.MinValue;
+    private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(30);
 
-    private static string? FindCredentialsPath()
+    private static string GetWindowsNativePath()
     {
-        if (_cachedCredentialsPath != null && File.Exists(_cachedCredentialsPath))
-        {
-            return _cachedCredentialsPath;
-        }
-
-        // Try WSL paths first (common distros)
-        string[] wslDistros = ["Debian", "Ubuntu", "Ubuntu-22.04", "Ubuntu-20.04", "kali-linux"];
-
-        foreach (var distro in wslDistros)
-        {
-            var wslHomePath = $@"\\wsl$\{distro}\home";
-            if (Directory.Exists(wslHomePath))
-            {
-                try
-                {
-                    foreach (var userDir in Directory.GetDirectories(wslHomePath))
-                    {
-                        var credPath = Path.Combine(userDir, ".claude", ".credentials.json");
-                        if (File.Exists(credPath))
-                        {
-                            _cachedCredentialsPath = credPath;
-                            System.Diagnostics.Debug.WriteLine($"Found credentials at: {credPath}");
-                            return credPath;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error searching {wslHomePath}: {ex.Message}");
-                }
-            }
-        }
-
-        // Fallback to Windows path
-        var windowsPath = Path.Combine(
+        return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".claude",
             ".credentials.json"
         );
+    }
 
-        if (File.Exists(windowsPath))
+    private static async Task<bool> IsWslAvailableAsync()
+    {
+        try
         {
-            _cachedCredentialsPath = windowsPath;
-            return windowsPath;
+            var task = Task.Run(() => Directory.Exists(@"\\wsl$"));
+            return await task.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static async Task<string?> FindCredentialsPathAsync()
+    {
+        // Fast path: return cached path if still valid
+        if (_cachedCredentialsPath != null
+            && File.Exists(_cachedCredentialsPath)
+            && DateTime.UtcNow - _cacheTimestamp < CacheLifetime)
+        {
+            return _cachedCredentialsPath;
         }
 
-        return null;
+        var candidates = new List<(string Path, DateTime LastModified)>();
+
+        // 1. Check Windows native path first (instant local FS check)
+        var windowsPath = GetWindowsNativePath();
+        if (File.Exists(windowsPath))
+        {
+            try
+            {
+                candidates.Add((windowsPath, File.GetLastWriteTimeUtc(windowsPath)));
+                System.Diagnostics.Debug.WriteLine($"Found native Windows credentials at: {windowsPath}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error reading native credentials timestamp: {ex.Message}");
+                candidates.Add((windowsPath, DateTime.MinValue));
+            }
+        }
+
+        // 2. Check WSL paths (with availability guard)
+        if (await IsWslAvailableAsync())
+        {
+            string[] wslDistros = ["Debian", "Ubuntu", "Ubuntu-22.04", "Ubuntu-20.04", "kali-linux"];
+
+            foreach (var distro in wslDistros)
+            {
+                var wslHomePath = $@"\\wsl$\{distro}\home";
+                if (Directory.Exists(wslHomePath))
+                {
+                    try
+                    {
+                        foreach (var userDir in Directory.GetDirectories(wslHomePath))
+                        {
+                            var credPath = Path.Combine(userDir, ".claude", ".credentials.json");
+                            if (File.Exists(credPath))
+                            {
+                                try
+                                {
+                                    candidates.Add((credPath, File.GetLastWriteTimeUtc(credPath)));
+                                }
+                                catch
+                                {
+                                    candidates.Add((credPath, DateTime.MinValue));
+                                }
+                                System.Diagnostics.Debug.WriteLine($"Found WSL credentials at: {credPath}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error searching {wslHomePath}: {ex.Message}");
+                    }
+                }
+            }
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("WSL not available, skipping WSL credential paths");
+        }
+
+        if (candidates.Count == 0)
+        {
+            _cachedCredentialsPath = null;
+            return null;
+        }
+
+        // Pick the most recently modified credentials file
+        var best = candidates.OrderByDescending(c => c.LastModified).First();
+        _cachedCredentialsPath = best.Path;
+        _cacheTimestamp = DateTime.UtcNow;
+
+        System.Diagnostics.Debug.WriteLine($"Selected credentials: {best.Path} (modified {best.LastModified:u})");
+        if (candidates.Count > 1)
+        {
+            System.Diagnostics.Debug.WriteLine($"  ({candidates.Count} candidates found, picked most recent)");
+        }
+
+        return best.Path;
     }
 
     public static async Task<string?> GetAccessTokenAsync()
     {
         try
         {
-            var credentialsPath = FindCredentialsPath();
+            var credentialsPath = await FindCredentialsPathAsync();
             if (credentialsPath == null)
             {
                 return null;
@@ -182,12 +244,19 @@ public class CredentialService
 
     public static bool CredentialsExist()
     {
-        return FindCredentialsPath() != null;
+        // Fast synchronous check: cached path or Windows native path
+        if (_cachedCredentialsPath != null && File.Exists(_cachedCredentialsPath))
+        {
+            return true;
+        }
+
+        // Quick fallback: check Windows native path (no WSL scan, avoids blocking)
+        return File.Exists(GetWindowsNativePath());
     }
 
     public static string? GetCredentialsPath()
     {
-        return FindCredentialsPath();
+        return _cachedCredentialsPath;
     }
 }
 
